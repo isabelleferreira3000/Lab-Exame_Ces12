@@ -1,3 +1,7 @@
+//
+// PATTERN: VECTOR AND MATRIX STARTS ON 1
+//
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -10,7 +14,7 @@ public:
     int index;
     int x;
     int y;
-    int paiIndex;
+    int fatherIndex;
 
     Coordinates();
     ~Coordinates();
@@ -46,7 +50,13 @@ void readFile (string file)
     if (input.is_open())
     {
         input >> numberOfCities;
+
         coordinates.resize(numberOfCities+1);
+
+        adjacencyMatrix.resize(numberOfCities+1);
+        for (int i = 1; i <= numberOfCities; i++){
+            adjacencyMatrix[i].resize(numberOfCities+1);
+        }
     }
     else
         cout << "nao achou o arquivo";
@@ -61,11 +71,6 @@ void readFile (string file)
         coordinates[i].index = index;
         coordinates[i].x  = x;
         coordinates[i].y = y;
-    }
-
-    adjacencyMatrix.resize(numberOfCities+1);
-    for (int i = 1; i <= numberOfCities; i++){
-        adjacencyMatrix[i].resize(numberOfCities+1);
     }
 
     for (int i = 1; i <= numberOfCities; i++){
@@ -90,7 +95,7 @@ void prim (){
     smallerDistanceToSubGraph[1] = 0;
 
     for (int i = 1; i <= numberOfCities; i++){
-        coordinates[i].paiIndex = 0;
+        coordinates[i].fatherIndex = 0;
 
     }
 }
@@ -116,7 +121,7 @@ Coordinates::Coordinates() {
     this->index = 0;
     this->x = 0;
     this->y = 0;
-    this->paiIndex = 0;
+    this->fatherIndex = 0;
 }
 
 Coordinates::~Coordinates() = default;
@@ -158,10 +163,10 @@ bool Heap::compare(Coordinates city1, Coordinates city2) {
         return true;
     }
     else if (smallerDistanceToSubGraph[city1.index] == smallerDistanceToSubGraph[city2.index]){
-        if (city1.paiIndex < city2.paiIndex){
+        if (city1.fatherIndex < city2.fatherIndex){
             return true;
         }
-        else if (city1.paiIndex == city2.paiIndex){
+        else if (city1.fatherIndex == city2.fatherIndex){
             return city1.index < city2.index;
         }
     }
