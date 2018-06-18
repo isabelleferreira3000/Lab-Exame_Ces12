@@ -1,3 +1,0 @@
-/home/bell/Documents/ITA/5semestre/ces12/lab_exame/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/bell/Documents/ITA/5semestre/ces12/lab_exame/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/bell/Documents/ITA/5semestre/ces12/lab_exame/cmake-build-debug/CMakeFiles/lab_exame.dir
