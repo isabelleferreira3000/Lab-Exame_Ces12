@@ -8,7 +8,7 @@
 #include <vector>
 #include <algorithm>
 
-#define DEBUG
+//#define DEBUG
 #define INF 1000000000
 
 using namespace std;
@@ -114,7 +114,6 @@ void readFile (string file)
 ofstream output;
 void writeFile(Graph G){
     if (output.is_open()){
-        cout << "ABRIUUUU" << endl;
         output << G.totalSum << "\n";
     }
 
