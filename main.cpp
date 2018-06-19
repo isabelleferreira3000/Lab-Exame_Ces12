@@ -6,8 +6,10 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 #define DEBUG
+#define INF 1000000000
 
 using namespace std;
 
@@ -22,18 +24,31 @@ public:
 
     City();
     ~City();
+
+    void printCity();
 };
+
+
+bool compare(City &city1, City &city2){
+    return city1.index < city2.index;
+}
 
 class Graph{
 public:
     std::vector<vector<int>> adjacencyMatrix;
+    std::vector<vector<City>> adjacencyList;
+    std::vector<bool> visited;
+    int totalSum;
 
     Graph(std::vector<City> &cities);
     ~Graph();
 
     void printAdjacencyMatrix();
+    void printAdjacencyList();
     void printCitiesXY();
-    int distance(City city1, City city2);
+    int distance(City &city1, City &city2);
+    void DFS(City &u);
+    void travelingSalesMan();
 };
 
 class Heap{
@@ -44,20 +59,20 @@ public:
     Heap(std::vector<City> &cities);
     ~Heap();
 
-    void print();
+    void printHeap();
     void Sift(int i);
-    bool compare(City city1, City city2);
+    bool compare(City &city1, City &city2);
     City min();
     City extractMin();
-    void modify(int k, City city);
-    int fatherIndex(int k);
-    void insert(City city);
-    void remove(City city);
+    void modify(int k, City &city);
+    void modifyWithIndex(City &city);
+    int fatherPositionOnHeap(int k);
+//    void remove(City &city);
 };
 
 int numberOfCities;
 std::vector<City> cities;
-std::vector<vector<int>> adjacencyMatrix;
+//std::vector<vector<int>> adjacencyMatrix;
 
 // le o arquivo, calcula o vetor de cidades
 void readFile (string file)
@@ -83,22 +98,16 @@ void readFile (string file)
 
         cities[i].index = index;
         cities[i].fatherIndex = -1;
+        cities[i].fatherDistance = INF;
         cities[i].x  = x;
         cities[i].y = y;
         cities[i].alreadyAnalyzed = false;
     }
 
+    sort(cities.begin(), cities.end(), compare);
+
     input.close();
 }
-
-//class WeightAndVertice{
-//public:
-//    int weight;
-//    int vertice;
-//
-//    WeightAndVertice(int weight, int vertice);
-//    ~WeightAndVertice();
-//};
 
 // Q é um conjunto de pares (peso, vértice)
 Heap *Q;
@@ -108,20 +117,27 @@ void prim (){
 
     City v;
 
-    Q->insert(cities[0]);
+    int indexOfFirst = 0;
+    cities[indexOfFirst].fatherDistance = 0;
+    Q->modifyWithIndex(cities[indexOfFirst]);
 
-    while (Q->size != 0){
+    while (Q->size != 0) {
         v = Q->extractMin();
-        v.alreadyAnalyzed = true;
-
+        if (v.index != 1){
+            G->adjacencyList[v.fatherIndex-1].push_back(v);
+        }
+        cities[v.index-1].alreadyAnalyzed = true;
         for (int u = 0; u < numberOfCities; u++){
-            if (u != v.index && !cities[u].alreadyAnalyzed){
-                if (cities[u].fatherIndex == -1){
-//                    Q->insert(cities[u])
+            if (!cities[u].alreadyAnalyzed) {
+                if (cities[u].fatherDistance > G->adjacencyMatrix[v.index-1][u]){
+                    cities[u].fatherIndex = v.index;
+                    cities[u].fatherDistance = G->adjacencyMatrix[v.index-1][u];
+                    Q->modifyWithIndex(cities[u]);
                 }
-                else{
-                    if (G->adjacencyMatrix[cities[u].fatherIndex][u] > G->adjacencyMatrix[v.index][u]){
-
+                else if (cities[u].fatherDistance == G->adjacencyMatrix[v.index-1][u]){
+                    if (cities[u].fatherIndex > v.index){
+                        cities[u].fatherIndex = v.index;
+                        Q->modifyWithIndex(cities[u]);
                     }
                 }
             }
@@ -130,26 +146,30 @@ void prim (){
 
 }
 
-//
-// IMPLEMENTANDO AS CIDADES
-//
-
 City::City() {
     index = 0;
     x = 0;
     y = 0;
     fatherIndex = 0;
-    fatherDistance = 0;
+    fatherDistance = INF;
     alreadyAnalyzed = false;
+}
+
+void City::printCity() {
+    cout << "IMPRESSAO DA CIDADE " << index << endl;
+    cout << "Pai atual: " << fatherIndex << endl;
+    cout << "Distancia pro pai: " << fatherDistance << endl;
 }
 
 City::~City() = default;
 
-//
-// IMPLEMENTANDO O GRAFO
-//
 
 Graph::Graph(std::vector<City> &cities) {
+    totalSum = 0;
+    visited.resize(numberOfCities);
+    for (int i = 0; i < numberOfCities; i++){
+        visited[i] = false;
+    }
     adjacencyMatrix.resize(numberOfCities);
     for (int i = 0; i < numberOfCities; i++){
         adjacencyMatrix[i].resize(numberOfCities);
@@ -160,6 +180,10 @@ Graph::Graph(std::vector<City> &cities) {
             adjacencyMatrix[i][j] = distance(cities[i], cities[j]);
         }
     }
+    adjacencyList.resize(numberOfCities);
+    for (int i = 0; i < numberOfCities; i++){
+        adjacencyList[i].push_back(cities[i]);
+    }
 }
 
 Graph::~Graph(){
@@ -167,9 +191,14 @@ Graph::~Graph(){
         adjacencyMatrix[i].clear();
     }
     adjacencyMatrix.clear();
+
+    for (int i = 0; i < adjacencyList.size(); i++){
+        adjacencyList[i].clear();
+    }
+    adjacencyList.clear();
 };
 
-int Graph::distance(City city1, City city2) {
+int Graph::distance(City &city1, City &city2) {
     int xd = city2.x - city1.x;
     int yd = city2.y - city1.y;
     int dij;
@@ -179,8 +208,15 @@ int Graph::distance(City city1, City city2) {
 
 void Graph::printAdjacencyMatrix() {
     cout << endl << "IMPRESSAO DA MATRIZ DE ADJACENCIAS:"<< endl;
+    cout << "  ";
+    for (int i = 0; i < numberOfCities; i++){
+        cout << i << " ";
+    }
+    cout << endl;
     for (int i = 0; i < numberOfCities; i++){
         for (int j = 0; j < numberOfCities; j++){
+            if (j == 0)
+                cout << i << " ";
             cout << adjacencyMatrix[i][j] << " ";
         }
         cout << endl;
@@ -190,26 +226,51 @@ void Graph::printAdjacencyMatrix() {
 
 void Graph::printCitiesXY() {
     cout << endl << "IMPRESSAO DO VETOR GLOBAL DE CIDADES X E Y:"<< endl;
+    cout << numberOfCities << endl;
     for (int i = 0; i < numberOfCities; i++){
         cout << cities[i].index << " " << cities[i].x << " " << cities[i].y << endl;
     }
     cout << endl << endl;
 }
 
-//
-// IMPLEMENTANDO A HEAP
-//
+void Graph::printAdjacencyList() {
+    cout << endl << "IMPRESSAO DA LISTA DE ADJACENCIA:"<< endl;
+    for (int i = 0; i < numberOfCities; i++){
+        for (int j = 0; j < adjacencyList[i].size(); j++){
+            cout << adjacencyList[i][j].index << " ";
+        }
+        cout << endl;
+    }
+    cout << endl << endl;
+}
+
+void Graph::DFS(City &u) {
+    visit(u);
+    visited[u.index-1] = true;
+    if (u.index != 1)
+        totalSum += u.fatherDistance;
+
+    for (int j = 0; j < adjacencyList[u.index-1].size(); j++){
+        City v = adjacencyList[u.index-1][j];
+        if(!visited[v.index-1]) {
+            DFS(v);
+        }
+    }
+}
+
+void Graph::travelingSalesMan() {
+
+}
 
 Heap::Heap(std::vector<City> &cities) {
-    this->size = (int) cities.size();
+    size = numberOfCities;
     heap.resize(size);
 
-    for (int i = 0; i < this->size; i++){
-        cities[i].fatherDistance = i;
-        this->heap[i] = cities[i];
+    for (int i = 0; i < size; i++){
+        heap[i] = cities[i];
     }
 
-    int halfSizeOfVector = this->size/2 - 1;
+    int halfSizeOfVector = size/2 - 1;
     for (int i = halfSizeOfVector; i >= 0; i--){
         Sift(i);
     }
@@ -225,34 +286,31 @@ void Heap::Sift(int i) {
     int smaller = i;
     City aux;
 
-    if (left < this->size && compare(this->heap[left], this->heap[i]))
+    if (left < size && compare(heap[left], heap[i]))
         smaller = left;
-    if (right < this->size && compare(this->heap[right], this->heap[smaller]))
+    if (right < size && compare(heap[right], heap[smaller]))
         smaller = right;
     if (smaller != i) {
-        aux = this->heap[i];
-        this->heap[i] = this->heap[smaller];
-        this->heap[smaller] = aux;
+        aux = heap[i];
+        heap[i] = heap[smaller];
+        heap[smaller] = aux;
         Sift(smaller);
     }
 }
 
-bool Heap::compare(City city1, City city2) {
+bool Heap::compare(City &city1, City &city2) {
     if (city1.fatherDistance < city2.fatherDistance){
         return true;
     }
+    else if (city1.fatherDistance == city2.fatherDistance) {
+        if (city1.fatherIndex < city2.fatherIndex) {
+            return true;
+        } else if (city1.fatherIndex == city2.fatherIndex) {
+            if (city1.index < city2.index)
+                return true;
+        }
+    }
     return false;
-//
-//    else if (smallerDistanceToSubGraph[city1.index] == smallerDistanceToSubGraph[city2.index]){
-//        if (city1.fatherIndex < city2.fatherIndex){
-//            return true;
-//        }
-//        else if (city1.fatherIndex == city2.fatherIndex){
-//            return city1.index < city2.index;
-//        }
-//    }
-//    else
-//        return false;
 }
 
 City Heap::min() {
@@ -260,35 +318,36 @@ City Heap::min() {
 }
 
 City Heap::extractMin() {
-    if (this->size < 1)
+    if (size < 1)
         cout << "Heap underflow" << std::endl;
     else {
-        City min = this->heap[0];
-        this->heap[0] = this->heap[this->size-1];
-        this->size--;
+        City min = heap[0];
+        heap[0] = heap[size-1];
+        size--;
         Sift(0);
         return min;
     }
 }
 
-void Heap::modify(int k, City city) {
+
+void Heap::modify(int k, City &city) {
     City aux;
-    if (k >= this->size || k < 0)
+    if (k >= size || k < 0)
         cout << "Index error" << std::endl;
     else {
-        this->heap[k] = city;
+        heap[k] = city;
 
-        while (k > 0 && compare(this->heap[fatherIndex(k)], this->heap[k])) { //conserta para cima
-            aux = this->heap[k];
-            this->heap[k] = this->heap[fatherIndex(k)];
-            this->heap[fatherIndex(k)] = aux;
-            k = fatherIndex(k);
+        while (k > 0 && compare(heap[k], heap[fatherPositionOnHeap(k)])) { //conserta para cima
+            aux = heap[k];
+            heap[k] = heap[fatherPositionOnHeap(k)];
+            heap[fatherPositionOnHeap(k)] = aux;
+            k = fatherPositionOnHeap(k);
         }
         Sift(k); // ou conserta para baixo
     }
 }
 
-int Heap::fatherIndex(int k) {
+int Heap::fatherPositionOnHeap(int k) {
     if (k % 2 == 0){
         return k/2-1;
     }
@@ -296,26 +355,7 @@ int Heap::fatherIndex(int k) {
         return k/2;
 }
 
-void Heap::insert(City city) {
-    this->size++;
-    modify(this->size-1, city);
-}
-
-void Heap::remove(City city) {
-    int i;
-    bool find = false;
-    for (i = 0; i < size && !find; i++) {
-        if (cities[i].index == city.index) {
-            find = true;
-        }
-    }
-    i--;
-    City aux = heap[size-1];
-    size--;
-    modify(i, aux);
-}
-
-void Heap::print() {
+void Heap::printHeap() {
     cout << endl << "IMPRESSAO DA HEAP:"<< endl;
     for (int i = 0; i < size; i++){
         cout << "indice da cidade: " << heap[i].index <<
@@ -323,6 +363,17 @@ void Heap::print() {
     }
     cout << endl << endl;
 
+}
+
+void Heap::modifyWithIndex(City &city) {
+    // CRIAR UM VETOR QUE GUARDA A POSICAO DA CIDADE NA HEAP ANTES DE ENTREGAR
+    int k = -1; // k é a posição da cidade na heap
+    for (int i = 0; i < numberOfCities && k == -1; i++){
+        if (heap[i].index == city.index){
+            k = i;
+        }
+    }
+    modify(k, city);
 }
 
 int main() {
@@ -333,11 +384,12 @@ int main() {
 
         G = new Graph(cities);
         Q = new Heap(cities);
+        prim();
 
 #ifdef DEBUG
         G->printCitiesXY();
         G->printAdjacencyMatrix();
-        Q->print();
+        G->printAdjacencyList();
 #endif
 
         delete G;
