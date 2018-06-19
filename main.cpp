@@ -38,7 +38,8 @@ public:
     std::vector<vector<int>> adjacencyMatrix;
     std::vector<vector<City>> adjacencyList;
     std::vector<bool> visited;
-    int totalSum;
+    std::vector<int> orderToVisit;
+    long long int totalSum;
 
     Graph(std::vector<City> &cities);
     ~Graph();
@@ -46,6 +47,7 @@ public:
     void printAdjacencyMatrix();
     void printAdjacencyList();
     void printCitiesXY();
+    void printOrderToVisit();
     int distance(City &city1, City &city2);
     void DFS(City &u);
     void travelingSalesMan();
@@ -109,6 +111,15 @@ void readFile (string file)
     input.close();
 }
 
+ofstream output;
+void writeFile(Graph G){
+    if (output.is_open()){
+        cout << "ABRIUUUU" << endl;
+        output << G.totalSum << "\n";
+    }
+
+}
+
 // Q é um conjunto de pares (peso, vértice)
 Heap *Q;
 Graph *G;
@@ -143,7 +154,8 @@ void prim (){
             }
         }
     }
-
+    G->DFS(G->adjacencyList[0][0]);
+    G->travelingSalesMan();
 }
 
 City::City() {
@@ -166,10 +178,12 @@ City::~City() = default;
 
 Graph::Graph(std::vector<City> &cities) {
     totalSum = 0;
+
     visited.resize(numberOfCities);
     for (int i = 0; i < numberOfCities; i++){
         visited[i] = false;
     }
+
     adjacencyMatrix.resize(numberOfCities);
     for (int i = 0; i < numberOfCities; i++){
         adjacencyMatrix[i].resize(numberOfCities);
@@ -245,10 +259,8 @@ void Graph::printAdjacencyList() {
 }
 
 void Graph::DFS(City &u) {
-    visit(u);
     visited[u.index-1] = true;
-    if (u.index != 1)
-        totalSum += u.fatherDistance;
+    orderToVisit.push_back(u.index);
 
     for (int j = 0; j < adjacencyList[u.index-1].size(); j++){
         City v = adjacencyList[u.index-1][j];
@@ -259,7 +271,18 @@ void Graph::DFS(City &u) {
 }
 
 void Graph::travelingSalesMan() {
+    totalSum += adjacencyMatrix[orderToVisit[0]-1][orderToVisit[numberOfCities-1]-1];
+    for (int i = 1; i < numberOfCities; i++){
+        totalSum += adjacencyMatrix[orderToVisit[i]-1][orderToVisit[i-1]-1];
+    }
+}
 
+void Graph::printOrderToVisit() {
+    cout << endl << "IMPRESSAO DO ORDER TO VISIT:"<< endl;
+    for (int i = 0; i < numberOfCities; i++){
+        cout << orderToVisit[i] << " ";
+    }
+    cout << endl << endl;
 }
 
 Heap::Heap(std::vector<City> &cities) {
@@ -379,22 +402,27 @@ void Heap::modifyWithIndex(City &city) {
 int main() {
     int numberFiles = 1;
 
+    output.open ("../saida.txt");
+
     for (int i = 1; i <= numberFiles; i++){
         readFile("../entrada.txt");
 
         G = new Graph(cities);
         Q = new Heap(cities);
         prim();
+        writeFile(*G);
 
 #ifdef DEBUG
         G->printCitiesXY();
         G->printAdjacencyMatrix();
         G->printAdjacencyList();
+        G->printOrderToVisit();
 #endif
 
         delete G;
         delete Q;
     }
+    output.close();
 
     return 0;
 }
