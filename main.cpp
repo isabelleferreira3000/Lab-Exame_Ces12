@@ -8,18 +8,20 @@
 #include <vector>
 #include <algorithm>
 
-//#define DEBUG
+#define DEBUG
 #define INF 1000000000
 
 using namespace std;
+
+int currentInput;
 
 class City {
 public:
     int index;
     int fatherIndex;
     int fatherDistance;
-    int x;
-    int y;
+    float x;
+    float y;
     bool alreadyAnalyzed;
 
     City();
@@ -91,7 +93,8 @@ void readFile (string file)
     else
         cout << "nao achou o arquivo" << std::endl;
 
-    int index, x, y;
+    int index;
+    float x, y;
 
     for (int i = 0; i < numberOfCities; i++){
         input >> index;
@@ -105,10 +108,10 @@ void readFile (string file)
         cities[i].y = y;
         cities[i].alreadyAnalyzed = false;
     }
-
-    sort(cities.begin(), cities.end(), compare);
-
-    input.close();
+    if (numberOfCities != 0){
+        sort(cities.begin(), cities.end(), compare);
+        input.close();
+    }
 }
 
 ofstream output;
@@ -124,37 +127,38 @@ Heap *Q;
 Graph *G;
 
 void prim (){
+    if (numberOfCities != 0){
+        City v;
 
-    City v;
+        int indexOfFirst = 0;
+        cities[indexOfFirst].fatherDistance = 0;
+        Q->modifyWithIndex(cities[indexOfFirst]);
 
-    int indexOfFirst = 0;
-    cities[indexOfFirst].fatherDistance = 0;
-    Q->modifyWithIndex(cities[indexOfFirst]);
-
-    while (Q->size != 0) {
-        v = Q->extractMin();
-        if (v.index != 1){
-            G->adjacencyList[v.fatherIndex-1].push_back(v);
-        }
-        cities[v.index-1].alreadyAnalyzed = true;
-        for (int u = 0; u < numberOfCities; u++){
-            if (!cities[u].alreadyAnalyzed) {
-                if (cities[u].fatherDistance > G->adjacencyMatrix[v.index-1][u]){
-                    cities[u].fatherIndex = v.index;
-                    cities[u].fatherDistance = G->adjacencyMatrix[v.index-1][u];
-                    Q->modifyWithIndex(cities[u]);
-                }
-                else if (cities[u].fatherDistance == G->adjacencyMatrix[v.index-1][u]){
-                    if (cities[u].fatherIndex > v.index){
+        while (Q->size != 0) {
+            v = Q->extractMin();
+            if (v.index != 1){
+                G->adjacencyList[v.fatherIndex-1].push_back(v);
+            }
+            cities[v.index-1].alreadyAnalyzed = true;
+            for (int u = 0; u < numberOfCities; u++){
+                if (!cities[u].alreadyAnalyzed) {
+                    if (cities[u].fatherDistance > G->adjacencyMatrix[v.index-1][u]){
                         cities[u].fatherIndex = v.index;
+                        cities[u].fatherDistance = G->adjacencyMatrix[v.index-1][u];
                         Q->modifyWithIndex(cities[u]);
+                    }
+                    else if (cities[u].fatherDistance == G->adjacencyMatrix[v.index-1][u]){
+                        if (cities[u].fatherIndex > v.index){
+                            cities[u].fatherIndex = v.index;
+                            Q->modifyWithIndex(cities[u]);
+                        }
                     }
                 }
             }
         }
+        G->DFS(G->adjacencyList[0][0]);
+        G->travelingSalesMan();
     }
-    G->DFS(G->adjacencyList[0][0]);
-    G->travelingSalesMan();
 }
 
 City::City() {
@@ -212,8 +216,8 @@ Graph::~Graph(){
 };
 
 int Graph::distance(City &city1, City &city2) {
-    int xd = city2.x - city1.x;
-    int yd = city2.y - city1.y;
+    float xd = city2.x - city1.x;
+    float yd = city2.y - city1.y;
     int dij;
     dij = int(sqrt(xd * xd + yd * yd) + 0.5);
     return dij;
@@ -291,10 +295,11 @@ Heap::Heap(std::vector<City> &cities) {
     for (int i = 0; i < size; i++){
         heap[i] = cities[i];
     }
-
-    int halfSizeOfVector = size/2 - 1;
-    for (int i = halfSizeOfVector; i >= 0; i--){
-        Sift(i);
+    if (size != 0){
+        int halfSizeOfVector = size/2 - 1;
+        for (int i = halfSizeOfVector; i >= 0; i--){
+            Sift(i);
+        }
     }
 }
 
@@ -354,8 +359,10 @@ City Heap::extractMin() {
 
 void Heap::modify(int k, City &city) {
     City aux;
-    if (k >= size || k < 0)
+    if (k >= size || k < 0){
+        cout << "current input: " << currentInput << endl;
         cout << "Index error" << std::endl;
+    }
     else {
         heap[k] = city;
 
@@ -399,16 +406,40 @@ void Heap::modifyWithIndex(City &city) {
 }
 
 int main() {
-    int numberFiles = 1;
+    int numberFiles;
 
-    output.open ("../saida.txt");
+    cin >> numberFiles;
+    string nameInputFile;
 
-    for (int i = 1; i <= numberFiles; i++){
-        readFile("../entrada.txt");
+    if (numberFiles < 1){
+        cout << "numero de arquivos menor que 1" << endl;
+    }
+    else if (numberFiles > 99){
+        cout << "numero de arquivos maior que 99" << endl;
+    }
+    output.open ("saida.txt");
+
+    for (currentInput = 1; currentInput <= numberFiles; currentInput++){
+        nameInputFile = "ent";
+
+        if (currentInput >= 1 && currentInput <= 9){
+            nameInputFile += '0';
+            nameInputFile += std::to_string(currentInput);
+            nameInputFile += ".txt";
+        }
+        else if (currentInput >= 10 && currentInput <= 99){
+            nameInputFile += std::to_string(currentInput);
+            nameInputFile += ".txt";
+        }
+//        nameInputFile = "../ent07.txt";
+        readFile(nameInputFile);
 
         G = new Graph(cities);
+//        G->printCitiesXY();
+//        G->printAdjacencyMatrix();
         Q = new Heap(cities);
         prim();
+//        cout << "current input terminou o prim: " << currentInput << endl;
         writeFile(*G);
 
 #ifdef DEBUG
