@@ -3,4 +3,4 @@ project(lab_exame)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(lab_exame main.cpp)
+add_executable(lab_exame TSP.cpp)

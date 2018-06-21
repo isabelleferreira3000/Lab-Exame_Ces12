@@ -7,13 +7,15 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <sstream>
 
-#define DEBUG
+//#define DEBUG
 #define INF 1000000000
 
 using namespace std;
 
 int currentInput;
+int numberFiles;
 
 class City {
 public:
@@ -37,8 +39,8 @@ bool compare(City &city1, City &city2){
 
 class Graph{
 public:
-    std::vector<vector<int>> adjacencyMatrix;
-    std::vector<vector<City>> adjacencyList;
+    std::vector<vector<int> > adjacencyMatrix;
+    std::vector<vector<City> > adjacencyList;
     std::vector<bool> visited;
     std::vector<int> orderToVisit;
     long long int totalSum;
@@ -82,7 +84,7 @@ std::vector<City> cities;
 void readFile (string file)
 {
     ifstream input;
-    input.open (file);
+    input.open (file.c_str());
 
     if (input.is_open())
     {
@@ -115,11 +117,12 @@ void readFile (string file)
 }
 
 ofstream output;
-void writeFile(Graph G){
+void writeFile(Graph G, int cont){
     if (output.is_open()){
-        output << G.totalSum << "\n";
+        output << G.totalSum;
+        if (cont != numberFiles)
+            output << "\n";
     }
-
 }
 
 // Q é um conjunto de pares (peso, vértice)
@@ -176,7 +179,8 @@ void City::printCity() {
     cout << "Distancia pro pai: " << fatherDistance << endl;
 }
 
-City::~City() = default;
+City::~City(){
+};
 
 
 Graph::Graph(std::vector<City> &cities) {
@@ -406,8 +410,7 @@ void Heap::modifyWithIndex(City &city) {
 }
 
 int main() {
-    int numberFiles;
-
+//    cout << "oi";
     cin >> numberFiles;
     string nameInputFile;
 
@@ -424,12 +427,20 @@ int main() {
 
         if (currentInput >= 1 && currentInput <= 9){
             nameInputFile += '0';
-            nameInputFile += std::to_string(currentInput);
+            nameInputFile += '0' + currentInput;
+//            nameInputFile += std::to_string(currentInput);
             nameInputFile += ".txt";
         }
         else if (currentInput >= 10 && currentInput <= 99){
-            nameInputFile += std::to_string(currentInput);
+            std::ostringstream s;
+            s << currentInput;
+//            int dezena = currentInput%10;
+//            int unidade = currentInput - 10* dezena;
+            nameInputFile += s.str();
+//            nameInputFile += '0' + unidade;
+//            nameInputFile += std::to_string(currentInput);
             nameInputFile += ".txt";
+//            cout << nameInputFile << endl;
         }
 //        nameInputFile = "../ent07.txt";
         readFile(nameInputFile);
@@ -440,7 +451,7 @@ int main() {
         Q = new Heap(cities);
         prim();
 //        cout << "current input terminou o prim: " << currentInput << endl;
-        writeFile(*G);
+        writeFile(*G, currentInput);
 
 #ifdef DEBUG
         G->printCitiesXY();
